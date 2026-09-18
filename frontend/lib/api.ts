@@ -1,13 +1,34 @@
 import { AuthResponse, Conversation, Message, User } from "./types";
 
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+function resolveApiBase(): string {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!envUrl) {
+    return "http://localhost:8000";
+  }
+  let clean = envUrl.trim().replace(/\/+$/, "");
+  if (!clean.startsWith("http://") && !clean.startsWith("https://")) {
+    clean = `https://${clean}`;
+  }
+  return clean;
+}
 
-export const WS_BASE_URL =
-  process.env.NEXT_PUBLIC_WS_URL ||
-  (API_BASE_URL.startsWith("https://")
-    ? API_BASE_URL.replace("https://", "wss://") + "/ws/chat"
-    : API_BASE_URL.replace("http://", "ws://") + "/ws/chat");
+function resolveWsBase(apiBase: string): string {
+  const envWs = process.env.NEXT_PUBLIC_WS_URL;
+  if (envWs && envWs.trim()) {
+    let clean = envWs.trim().replace(/\/+$/, "");
+    if (!clean.startsWith("ws://") && !clean.startsWith("wss://")) {
+      clean = `wss://${clean}`;
+    }
+    return clean;
+  }
+  if (apiBase.startsWith("https://")) {
+    return apiBase.replace("https://", "wss://") + "/ws/chat";
+  }
+  return apiBase.replace("http://", "ws://") + "/ws/chat";
+}
+
+export const API_BASE_URL = resolveApiBase();
+export const WS_BASE_URL = resolveWsBase(API_BASE_URL);
 
 export class ApiError extends Error {
   status: number;

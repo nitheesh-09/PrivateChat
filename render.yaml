@@ -22,10 +22,7 @@ services:
       - key: COOKIE_SAMESITE
         value: "none"
       - key: CORS_ORIGINS
-        fromService:
-          type: web
-          name: privatechat-frontend
-          property: host
+        value: https://privatechat-frontend.onrender.com
 
   # ==========================================
   # Frontend UI (Next.js)
@@ -39,11 +36,10 @@ services:
     plan: free
     autoDeploy: true
     envVars:
+      - key: NODE_OPTIONS
+        value: "--max-old-space-size=460"
       - key: NEXT_PUBLIC_API_URL
-        fromService:
-          type: web
-          name: privatechat-backend
-          property: host
+        value: https://privatechat-backend.onrender.com
 
 databases:
   # ==========================================
