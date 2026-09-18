@@ -1,0 +1,46 @@
+# Python & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+backend/.venv/
+.venv/
+env/
+.pytest_cache/
+backend/.pytest_cache/
+*.egg-info/
+
+# Databases & local state
+*.sqlite3
+*.db
+backend/*.db
+private_chat.db
+backend/private_chat.db
+
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+node_modules/
+.next/
+
+# Environment files & secrets
+.env
+.env.local
+.env.*.local
+*.env
+backend/.env
+frontend/.env
+frontend/.env.local
+!.env.example
+!backend/.env.example
+
+# IDE & OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
