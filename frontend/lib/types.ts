@@ -47,6 +47,7 @@ export interface AuthResponse {
 
 export type WSEvent =
   | { type: "new_message"; conversation_id: string; message: Message }
+  | { type: "conversation_created"; conversation_id: string }
   | { type: "messages_read"; conversation_id: string; message_ids: string[]; read_at: string }
   | { type: "user_status"; user_id: string; username: string; is_online: boolean; last_seen: string }
   | { type: "typing"; conversation_id: string; user_id: string; username: string; is_typing: boolean }

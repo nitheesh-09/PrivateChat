@@ -109,10 +109,29 @@ export default function ChatPage() {
   };
 
   // WebSocket callbacks
+  const handleConversationCreated = useCallback(
+    async (conversationId: string) => {
+      try {
+        const newConv = await api.getConversationDetails(conversationId);
+        setConversations((prev) => {
+          if (prev.some((c) => c.id === conversationId)) {
+            return prev.map((c) => (c.id === conversationId ? newConv : c));
+          }
+          return [newConv, ...prev];
+        });
+      } catch {
+        loadConversations();
+      }
+    },
+    [loadConversations]
+  );
+
   const handleNewMessage = useCallback(
-    (conversationId: string, message: Message) => {
+    async (conversationId: string, message: Message) => {
+      const targetConvId = conversationId || message.conversation_id;
+
       // 1. If currently viewing this conversation, append message and mark as read
-      if (conversationId === activeConversationId) {
+      if (targetConvId === activeConversationId) {
         setMessages((prev) => {
           if (prev.some((m) => m.id === message.id)) {
             return prev.map((m) => (m.id === message.id ? message : m));
@@ -121,16 +140,22 @@ export default function ChatPage() {
         });
 
         if (user && message.sender_id !== user.id) {
-          api.markConversationRead(conversationId, [message.id]).catch(() => {});
+          api.markConversationRead(targetConvId, [message.id]).catch(() => {});
         }
       }
 
       // 2. Update conversation preview in sidebar
+      let exists = false;
       setConversations((prev) => {
+        exists = prev.some((c) => c.id === targetConvId);
+        if (!exists) {
+          return prev;
+        }
+
         const next = prev.map((c) => {
-          if (c.id === conversationId) {
+          if (c.id === targetConvId) {
             const isMe = user && message.sender_id === user.id;
-            const isCurrentlyActive = conversationId === activeConversationId;
+            const isCurrentlyActive = targetConvId === activeConversationId;
             const newUnread = !isMe && !isCurrentlyActive ? c.unread_count + 1 : c.unread_count;
 
             return {
@@ -151,8 +176,35 @@ export default function ChatPage() {
 
         return next;
       });
+
+      // 3. If conversation was NOT in sidebar, fetch it immediately so it appears right away!
+      if (!exists && targetConvId) {
+        try {
+          const convDetails = await api.getConversationDetails(targetConvId);
+          setConversations((prev) => {
+            if (prev.some((c) => c.id === targetConvId)) {
+              return prev.map((c) =>
+                c.id === targetConvId ? { ...c, last_message: message } : c
+              );
+            }
+            const isMe = user && message.sender_id === user.id;
+            const isCurrentlyActive = targetConvId === activeConversationId;
+            const unreadCount = !isMe && !isCurrentlyActive ? 1 : 0;
+            return [
+              {
+                ...convDetails,
+                last_message: message,
+                unread_count: unreadCount,
+              },
+              ...prev,
+            ];
+          });
+        } catch {
+          loadConversations();
+        }
+      }
     },
-    [activeConversationId, user]
+    [activeConversationId, user, loadConversations]
   );
 
   const handleMessagesRead = useCallback(
@@ -213,6 +265,7 @@ export default function ChatPage() {
   const { isConnected, isReconnecting, sendMessage, sendTyping } = useChatSocket({
     user,
     onNewMessage: handleNewMessage,
+    onConversationCreated: handleConversationCreated,
     onMessagesRead: handleMessagesRead,
     onUserStatus: handleUserStatus,
     onTyping: handleTyping,

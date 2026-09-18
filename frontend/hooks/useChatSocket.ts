@@ -7,6 +7,7 @@ import { WS_BASE_URL } from "@/lib/api";
 interface UseChatSocketProps {
   user: User | null;
   onNewMessage: (conversationId: string, message: Message) => void;
+  onConversationCreated?: (conversationId: string) => void;
   onMessagesRead: (conversationId: string, messageIds: string[], readAt: string) => void;
   onUserStatus: (userId: string, username: string, isOnline: boolean, lastSeen: string) => void;
   onTyping: (conversationId: string, userId: string, username: string, isTyping: boolean) => void;
@@ -15,6 +16,7 @@ interface UseChatSocketProps {
 export function useChatSocket({
   user,
   onNewMessage,
+  onConversationCreated,
   onMessagesRead,
   onUserStatus,
   onTyping,
@@ -29,6 +31,7 @@ export function useChatSocket({
 
   const callbacksRef = useRef({
     onNewMessage,
+    onConversationCreated,
     onMessagesRead,
     onUserStatus,
     onTyping,
@@ -37,11 +40,12 @@ export function useChatSocket({
   useEffect(() => {
     callbacksRef.current = {
       onNewMessage,
+      onConversationCreated,
       onMessagesRead,
       onUserStatus,
       onTyping,
     };
-  }, [onNewMessage, onMessagesRead, onUserStatus, onTyping]);
+  }, [onNewMessage, onConversationCreated, onMessagesRead, onUserStatus, onTyping]);
 
   const connect = useCallback(() => {
     if (!user || socketRef.current) return;
@@ -72,6 +76,9 @@ export function useChatSocket({
           switch (data.type) {
             case "new_message":
               callbacksRef.current.onNewMessage(data.conversation_id, data.message);
+              break;
+            case "conversation_created":
+              callbacksRef.current.onConversationCreated?.(data.conversation_id);
               break;
             case "messages_read":
               callbacksRef.current.onMessagesRead(data.conversation_id, data.message_ids, data.read_at);

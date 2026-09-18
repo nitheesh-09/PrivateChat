@@ -155,7 +155,7 @@ def get_user_conversations(
 
 
 @router.post("/direct", response_model=ConversationResponse, status_code=status.HTTP_201_CREATED)
-def create_or_get_direct_conversation(
+async def create_or_get_direct_conversation(
     payload: ConversationCreateDirect,
     response: Response,
     current_user: User = Depends(get_current_user),
@@ -210,11 +210,20 @@ def create_or_get_direct_conversation(
     db.commit()
     db.refresh(new_conv)
 
+    # Notify target user over WebSocket in real-time
+    await manager.broadcast_to_users(
+        [target_user.id],
+        {
+            "type": "conversation_created",
+            "conversation_id": new_conv.id,
+        },
+    )
+
     return format_conversation_response(new_conv, current_user.id, db)
 
 
 @router.post("/group", response_model=ConversationResponse, status_code=status.HTTP_201_CREATED)
-def create_group_conversation(
+async def create_group_conversation(
     payload: ConversationCreateGroup,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -246,6 +255,17 @@ def create_group_conversation(
     db.commit()
     db.refresh(new_group)
 
+    # Notify all other group members in real-time
+    other_members = [uid for uid in members_to_add if uid != current_user.id]
+    if other_members:
+        await manager.broadcast_to_users(
+            other_members,
+            {
+                "type": "conversation_created",
+                "conversation_id": new_group.id,
+            },
+        )
+
     return format_conversation_response(new_group, current_user.id, db)
 
 
@@ -261,7 +281,7 @@ def get_conversation_details(
 
 
 @router.post("/{conversation_id}/members", response_model=ConversationResponse)
-def add_group_members(
+async def add_group_members(
     conversation_id: str,
     payload: AddMembersRequest,
     current_user: User = Depends(get_current_user),
@@ -285,6 +305,16 @@ def add_group_members(
     if added_any:
         db.commit()
         db.refresh(conv)
+
+        # Notify all group members (existing + newly added) in real-time
+        all_members = [m.user_id for m in conv.members]
+        await manager.broadcast_to_users(
+            all_members,
+            {
+                "type": "conversation_created",
+                "conversation_id": conv.id,
+            },
+        )
 
     return format_conversation_response(conv, current_user.id, db)
 
@@ -367,6 +397,7 @@ async def send_conversation_message(
         member_user_ids,
         {
             "type": "new_message",
+            "conversation_id": conversation_id,
             "message": msg_dict,
         },
     )
