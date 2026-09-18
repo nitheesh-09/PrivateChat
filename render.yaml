@@ -39,7 +39,9 @@ services:
       - key: NODE_OPTIONS
         value: "--max-old-space-size=460"
       - key: NEXT_PUBLIC_API_URL
-        value: https://privatechat-backend.onrender.com
+        value: https://privatechat-backend-7it3.onrender.com
+      - key: NEXT_PUBLIC_WS_URL
+        value: wss://privatechat-backend-7it3.onrender.com/ws/chat
 
 databases:
   # ==========================================

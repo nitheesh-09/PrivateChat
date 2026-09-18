@@ -2,14 +2,24 @@ import { AuthResponse, Conversation, Message, User } from "./types";
 
 function resolveApiBase(): string {
   const envUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (!envUrl) {
-    return "http://localhost:8000";
+  if (envUrl && envUrl.trim()) {
+    let clean = envUrl.trim().replace(/\/+$/, "");
+    if (!clean.startsWith("http://") && !clean.startsWith("https://")) {
+      clean = `https://${clean}`;
+    }
+    // Automatically redirect outdated/generic Render URL to the user's active backend
+    if (clean === "https://privatechat-backend.onrender.com") {
+      return "https://privatechat-backend-7it3.onrender.com";
+    }
+    return clean;
   }
-  let clean = envUrl.trim().replace(/\/+$/, "");
-  if (!clean.startsWith("http://") && !clean.startsWith("https://")) {
-    clean = `https://${clean}`;
+
+  // Auto-detect production Render deployment in browser
+  if (typeof window !== "undefined" && window.location.hostname.includes("onrender.com")) {
+    return "https://privatechat-backend-7it3.onrender.com";
   }
-  return clean;
+
+  return "http://localhost:8000";
 }
 
 function resolveWsBase(apiBase: string): string {
@@ -18,6 +28,9 @@ function resolveWsBase(apiBase: string): string {
     let clean = envWs.trim().replace(/\/+$/, "");
     if (!clean.startsWith("ws://") && !clean.startsWith("wss://")) {
       clean = `wss://${clean}`;
+    }
+    if (clean === "wss://privatechat-backend.onrender.com/ws/chat") {
+      return "wss://privatechat-backend-7it3.onrender.com/ws/chat";
     }
     return clean;
   }
